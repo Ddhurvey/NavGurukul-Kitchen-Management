@@ -5,90 +5,83 @@ export async function GET() {
   try {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const todayDuty = await db.kitchenDuty.findFirst({
-      where: {
-        date: {
-          gte: today,
-          lt: tomorrow
+    // Get all duties and sort by date
+    const allDuties = await db.kitchenDuty.findMany({
+      include: {
+        teamLead: true,
+        assignments: {
+          include: {
+            student: true
+          }
         }
       },
-      include: {
-        teamLeader: {
-          select: { id: true, name: true, discordId: true }
-        },
-        member2: {
-          select: { id: true, name: true, discordId: true }
-        },
-        member3: {
-          select: { id: true, name: true, discordId: true }
-        },
-        member4: {
-          select: { id: true, name: true, discordId: true }
-        }
+      orderBy: {
+        date: 'desc'
       }
     })
 
-    if (!todayDuty) {
-      return NextResponse.json({ error: 'No duty assigned for today' }, { status: 404 })
-    }
+    // Find today's and tomorrow's duties
+    const todayDuty = allDuties.find(duty => {
+      const dutyDate = new Date(duty.date)
+      dutyDate.setHours(0, 0, 0, 0)
+      return dutyDate.getTime() === today.getTime()
+    })
 
-    const dutyData = {
-      id: todayDuty.id,
-      date: todayDuty.date,
-      teamLeader: todayDuty.teamLeader,
-      members: [todayDuty.member2, todayDuty.member3, todayDuty.member4],
-      menu: {
-        breakfast: todayDuty.breakfast,
-        lunch: todayDuty.lunch,
-        snacks: todayDuty.snacks,
-        dinner: todayDuty.dinner
-      },
-      isCompleted: todayDuty.isCompleted
-    }
+    const tomorrowDuty = allDuties.find(duty => {
+      const dutyDate = new Date(duty.date)
+      dutyDate.setHours(0, 0, 0, 0)
+      return dutyDate.getTime() === tomorrow.getTime()
+    })
 
-    return NextResponse.json(dutyData)
+    console.log('Today:', today.toISOString())
+    console.log('Tomorrow:', tomorrow.toISOString())
+    console.log('Today duty found:', !!todayDuty)
+    console.log('Tomorrow duty found:', !!tomorrowDuty)
+
+    return NextResponse.json({
+      today: todayDuty,
+      tomorrow: tomorrowDuty
+    })
   } catch (error) {
-    console.error('Error fetching today\'s duty:', error)
-    return NextResponse.json({ error: 'Failed to fetch today\'s duty' }, { status: 500 })
+    console.error('Error fetching kitchen duties:', error)
+    return NextResponse.json({ error: 'Failed to fetch kitchen duties' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    
-    const duty = await db.kitchenDuty.create({
+    const { date, studentIds, teamLeadId } = data
+
+    const dutyDate = new Date(date)
+    dutyDate.setHours(0, 0, 0, 0)
+
+    const kitchenDuty = await db.kitchenDuty.create({
       data: {
-        date: new Date(data.date),
-        teamLeaderId: data.teamLeaderId,
-        member2Id: data.member2Id,
-        member3Id: data.member3Id,
-        member4Id: data.member4Id,
-        breakfast: data.breakfast,
-        lunch: data.lunch,
-        snacks: data.snacks,
-        dinner: data.dinner
+        date: dutyDate,
+        teamLeadId,
+        assignments: {
+          create: studentIds.map((studentId: string, index: number) => ({
+            studentId,
+            isTeamLead: studentId === teamLeadId
+          }))
+        }
       },
       include: {
-        teamLeader: {
-          select: { id: true, name: true, discordId: true }
-        },
-        member2: {
-          select: { id: true, name: true, discordId: true }
-        },
-        member3: {
-          select: { id: true, name: true, discordId: true }
-        },
-        member4: {
-          select: { id: true, name: true, discordId: true }
+        teamLead: true,
+        assignments: {
+          include: {
+            student: true
+          }
         }
       }
     })
 
-    return NextResponse.json(duty, { status: 201 })
+    return NextResponse.json(kitchenDuty, { status: 201 })
   } catch (error) {
     console.error('Error creating kitchen duty:', error)
     return NextResponse.json({ error: 'Failed to create kitchen duty' }, { status: 500 })

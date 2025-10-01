@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { verifyPassword, createStudentSession, getUserRole } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
+
+// Default password for existing users who don't have a password set
+const DEFAULT_PASSWORD = 'password123'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,67 +11,70 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!email || !password) {
-      return NextResponse.json({ 
-        error: 'Email and password are required' 
+      return NextResponse.json({
+        error: 'Email and password are required'
       }, { status: 400 })
     }
 
-    // Find student
-    const student = await db.student.findUnique({
+    // Find user
+    const user = await db.student.findUnique({
       where: { email }
     })
 
-    if (!student) {
-      return NextResponse.json({ 
-        error: 'Invalid email or password' 
+    if (!user) {
+      return NextResponse.json({
+        error: 'Invalid email or password'
       }, { status: 401 })
     }
 
-    // Verify password
-    const isValidPassword = await verifyPassword(password, student.password)
-    if (!isValidPassword) {
-      return NextResponse.json({ 
-        error: 'Invalid email or password' 
+    // Check password
+    let isPasswordValid = false
+    
+    if (user.password) {
+      // User has a password set (registered through the system)
+      isPasswordValid = await bcrypt.compare(password, user.password)
+    } else {
+      // User doesn't have a password (existing user), use default password
+      if (password === DEFAULT_PASSWORD) {
+        isPasswordValid = true
+        
+        // Optionally set the default password for future logins
+        const hashedDefaultPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10)
+        await db.student.update({
+          where: { id: user.id },
+          data: { password: hashedDefaultPassword }
+        })
+      }
+    }
+
+    if (!isPasswordValid) {
+      return NextResponse.json({
+        error: 'Invalid email or password'
       }, { status: 401 })
     }
 
-    // Check if student is active
-    if (student.status === 'INACTIVE') {
-      return NextResponse.json({ 
-        error: 'Account is inactive' 
-      }, { status: 401 })
-    }
-
-    // Create session
-    const token = await createStudentSession(student.id)
-
-    // Update last login
-    await db.student.update({
-      where: { id: student.id },
-      data: { lastLoginAt: new Date() }
-    })
-
-    const role = getUserRole(student.workType, student.status)
-
+    // Return user data (excluding password)
     return NextResponse.json({
+      success: true,
       message: 'Login successful',
-      student: {
-        id: student.id,
-        name: student.name,
-        email: student.email,
-        workType: student.workType,
-        status: student.status,
-        foodPreference: student.foodPreference,
-        discordId: student.discordId,
-        role
-      },
-      token
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        foodPreference: user.foodPreference,
+        workAssignment: user.workAssignment,
+        isActive: user.isActive,
+        isPresent: user.isPresent,
+        isTeamMember: user.isTeamMember,
+        isJobPlaced: user.isJobPlaced,
+        profileClosed: user.profileClosed
+      }
     })
 
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json({ 
-      error: 'Login failed' 
+    return NextResponse.json({
+      error: 'Login failed'
     }, { status: 500 })
   }
 }

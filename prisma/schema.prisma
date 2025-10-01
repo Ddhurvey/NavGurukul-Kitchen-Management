@@ -14,212 +14,179 @@ datasource db {
 }
 
 model Student {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   name            String
-  email           String    @unique
-  password        String    // Added for authentication
-  discordId       String?
-  foodPreference  FoodType  @default(PANEER) // PANEER or EGG
-  workType        WorkType  @default(KITCHEN) // KITCHEN, TEAM, NONE
-  status          Status    @default(ACTIVE) // ACTIVE, LEAVE, PLACED, INACTIVE
-  joinedAt        DateTime  @default(now())
-  leaveStartAt    DateTime?
-  leaveEndAt      DateTime?
-  fcStartAt       DateTime?
-  fcEndAt         DateTime?
-  totalDuties     Int       @default(0)
-  lastDutyDate    DateTime?
-  nextAvailableDate DateTime?
-  lastLoginAt     DateTime?
-  isActive        Boolean   @default(true) // For login/logout status
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  email           String   @unique
+  password        String?  // Optional password for existing users
+  foodPreference  String   // "egg" or "paneer"
+  workAssignment  String?  // "Kitchen", "Team", "None", etc.
+  isActive        Boolean  @default(true)
+  isPresent       Boolean  @default(true)
+  isTeamMember    Boolean  @default(false)
+  isJobPlaced     Boolean  @default(false)
+  profileClosed   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  assignedDuties  KitchenDuty[] @relation("TeamLeader")
-  assignedDuties2 KitchenDuty[] @relation("Member2")
-  assignedDuties3 KitchenDuty[] @relation("Member3")
-  assignedDuties4 KitchenDuty[] @relation("Member4")
-  
-  // History relations
-  historyDutiesAsLeader KitchenHistory[] @relation("HistoryTeamLeader")
-  historyDutiesAsMember2 KitchenHistory[] @relation("HistoryMember2")
-  historyDutiesAsMember3 KitchenHistory[] @relation("HistoryMember3")
-  historyDutiesAsMember4 KitchenHistory[] @relation("HistoryMember4")
-  
-  dutySwapsRequested DutySwap[] @relation("SwapRequester")
-  dutySwapsTargeted   DutySwap[] @relation("SwapTarget")
-  leaveRecords    LeaveRecord[]
-  statusHistory   StudentStatusChange[]
-  sessions        StudentSession[]
+  dutyAssignments DutyAssignment[]
+  leaves          Leave[]
+  swapRequests    SwapRequest[] @relation("StudentSwaps")
+  swapApprovals   SwapRequest[] @relation("StudentApprovals")
+  fcAssignments   FoodCoordinator[]
+  tlAssignments   KitchenDuty[] @relation("TeamLead")
 
   @@map("students")
 }
 
-model KitchenDuty {
-  id          String    @id @default(cuid())
-  date        DateTime  @unique
-  teamLeaderId String
-  member2Id   String
-  member3Id   String
-  member4Id   String
-  breakfast   String?
-  lunch       String?
-  snacks      String?
-  dinner      String?
-  isCompleted Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model FoodCoordinator {
+  id          String   @id @default(cuid())
+  studentId   String
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations
-  teamLeader  Student   @relation("TeamLeader", fields: [teamLeaderId], references: [id])
-  member2     Student   @relation("Member2", fields: [member2Id], references: [id])
-  member3     Student   @relation("Member3", fields: [member3Id], references: [id])
-  member4     Student   @relation("Member4", fields: [member4Id], references: [id])
-  
-  // Link to history record
-  historyRecord KitchenHistory?
+  student     Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  menus       FoodMenu[]
+
+  @@map("food_coordinators")
+}
+
+model KitchenDuty {
+  id          String   @id @default(cuid())
+  date        DateTime @unique
+  teamLeadId  String?
+  cycleNumber Int      @default(1)
+  dayInCycle  Int      @default(1) // Day number in the current cycle (1-7)
+  isSundaySpecial Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teamLead    Student? @relation("TeamLead", fields: [teamLeadId], references: [id])
+  assignments DutyAssignment[]
 
   @@map("kitchen_duties")
 }
 
-model DutySwap {
-  id          String     @id @default(cuid())
-  requesterId String
-  targetId    String
-  dutyDate    DateTime
-  reason      String
-  status      SwapStatus @default(PENDING) // PENDING, APPROVED, REJECTED
-  requesterApproved Boolean @default(false)
-  targetApproved     Boolean @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+model DutyAssignment {
+  id            String   @id @default(cuid())
+  kitchenDutyId String
+  studentId     String
+  isTeamLead    Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
-  // Relations
-  requester   Student   @relation("SwapRequester", fields: [requesterId], references: [id])
-  target      Student   @relation("SwapTarget", fields: [targetId], references: [id])
+  kitchenDuty   KitchenDuty @relation(fields: [kitchenDutyId], references: [id], onDelete: Cascade)
+  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@map("duty_swaps")
+  @@unique([kitchenDutyId, studentId])
+  @@map("duty_assignments")
 }
 
-model LeaveRecord {
-  id          String    @id @default(cuid())
+model Leave {
+  id          String   @id @default(cuid())
   studentId   String
   startDate   DateTime
   endDate     DateTime
   reason      String
-  status      LeaveStatus @default(APPROVED) // APPROVED, REJECTED
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  status      String   @default("pending") // "pending", "approved", "rejected"
+  requestedAt DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations
-  student     Student   @relation(fields: [studentId], references: [id])
+  student     Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@map("leave_records")
+  @@map("leaves")
 }
 
-model KitchenHistory {
-  id          String    @id @default(cuid())
-  date        DateTime  @unique
-  teamName    String?   // Name of the kitchen team for that day
-  teamLeaderId String?
-  member2Id   String?
-  member3Id   String?
-  member4Id   String?
-  teamLeaderName String?
-  member2Name String?
-  member3Name String?
-  member4Name String?
+model SwapRequest {
+  id              String   @id @default(cuid())
+  requesterId     String
+  approverId      String
+  originalDate    DateTime
+  swapDate        DateTime
+  reason          String
+  status          String   @default("pending") // "pending", "approved", "rejected"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  requester       Student @relation("StudentSwaps", fields: [requesterId], references: [id], onDelete: Cascade)
+  approver        Student @relation("StudentApprovals", fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@map("swap_requests")
+}
+
+model FoodMenu {
+  id          String   @id @default(cuid())
+  date        DateTime @unique
   breakfast   String?
   lunch       String?
   snacks      String?
   dinner      String?
-  foodPreference String?  // PANEER or EGG
-  isCompleted Boolean   @default(false)
-  notes       String?   // Any additional notes about the day
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  fcId        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations to students for direct access
-  teamLeader  Student?  @relation("HistoryTeamLeader", fields: [teamLeaderId], references: [id])
-  member2     Student?  @relation("HistoryMember2", fields: [member2Id], references: [id])
-  member3     Student?  @relation("HistoryMember3", fields: [member3Id], references: [id])
-  member4     Student?  @relation("HistoryMember4", fields: [member4Id], references: [id])
+  fc          FoodCoordinator @relation(fields: [fcId], references: [id], onDelete: Cascade)
 
-  // Link to actual duty assignment
-  dutyAssignment KitchenDuty? @relation(fields: [date], references: [date])
+  @@map("food_menus")
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  type          String
+  message       String
+  targetDate    DateTime
+  sentAt        DateTime @default(now())
+  recipientIds  String   // JSON array of student IDs
+  status        String   @default("sent") // "sent", "failed", "pending"
+
+  @@map("notifications")
+}
+
+model KitchenHistory {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  teamLeadId    String?
+  teamMembers   String   // JSON array of student IDs
+  foodPreferences String // JSON array of food preferences
+  isSundaySpecial Boolean @default(false)
+  cycleNumber   Int
+  dayInCycle    Int
+  status        String   @default("assigned") // "assigned", "modified", "cancelled"
+  assignedAt    DateTime @default(now())
+  modifiedAt    DateTime?
+  modifiedBy    String?
+  notes         String?
 
   @@map("kitchen_history")
 }
 
-model MenuOverride {
-  id          String    @id @default(cuid())
-  date        DateTime  @unique
-  breakfast   String?
-  lunch       String?
-  snacks      String?
-  dinner      String?
-  reason      String?
-  createdBy   String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model NotificationSchedule {
+  id            String   @id @default(cuid())
+  type          String   // "daily_assignment", "reminder", "custom"
+  scheduledTime DateTime
+  message       String
+  targetDate    DateTime
+  status        String   @default("pending") // "pending", "sent", "failed", "cancelled"
+  sentAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  @@map("menu_overrides")
+  @@map("notification_schedules")
 }
 
-model StudentSession {
-  id        String   @id @default(cuid())
-  studentId String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+model DutyRotation {
+  id                String   @id @default(cuid())
+  currentCycle      Int      @default(1)
+  currentDayInCycle Int      @default(1) // 1-7, where 7 is Sunday
+  lastAssignedIndex Int      @default(0) // Index of last student assigned in rotation
+  studentQueue      String   // JSON array of student IDs in rotation order
+  isActive          Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
 
-  // Relations
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@map("student_sessions")
-}
-
-model StudentStatusChange {
-  id          String    @id @default(cuid())
-  studentId   String
-  oldStatus   Status
-  newStatus   Status
-  reason      String
-  changedBy   String   // ID of the user who made the change
-  createdAt   DateTime  @default(now())
-
-  // Relations
-  student     Student   @relation(fields: [studentId], references: [id])
-
-  @@map("student_status_changes")
-}
-
-enum FoodType {
-  PANEER
-  EGG
-}
-
-enum WorkType {
-  KITCHEN
-  TEAM
-  NONE
-}
-
-enum Status {
-  ACTIVE
-  LEAVE
-  PLACED
-  INACTIVE
-}
-
-enum SwapStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum LeaveStatus {
-  APPROVED
-  REJECTED
+  @@map("duty_rotation")
 }

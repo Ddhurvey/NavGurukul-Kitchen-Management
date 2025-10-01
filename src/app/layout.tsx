@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "./auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,14 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NavGurukul Kitchen Management",
-  description: "Automated kitchen duty assignment and student management system for NavGurukul",
-  keywords: ["NavGurukul", "Kitchen", "Management", "Duty", "Student", "Next.js"],
-  authors: [{ name: "NavGurukul Team" }],
+  title: "NavGurukul Kitchen Duty Management",
+  description: "Automated kitchen duty management system for NavGurukul students",
+  keywords: ["NavGurukul", "Kitchen Duty", "Management", "Students", "Food"],
+  authors: [{ name: "NavGurukul" }],
   openGraph: {
-    title: "NavGurukul Kitchen Management",
-    description: "Automated kitchen duty assignment and student management system",
+    title: "NavGurukul Kitchen Duty Management",
+    description: "Automated kitchen duty management system for NavGurukul students",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NavGurukul Kitchen Duty Management",
+    description: "Automated kitchen duty management system for NavGurukul students",
   },
 };
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test Page</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPIs() {
+            const results = document.getElementById('results');
+            
+            try {
+                console.log('Testing students API...');
+                const studentsRes = await fetch('/api/students');
+                const studentsData = await studentsRes.json();
+                console.log('Students:', studentsData.length);
+                
+                console.log('Testing kitchen duty API...');
+                const dutiesRes = await fetch('/api/kitchen-duty');
+                const dutiesData = await dutiesRes.json();
+                console.log('Today duty:', dutiesData.today);
+                console.log('Tomorrow duty:', dutiesData.tomorrow);
+                
+                console.log('Testing food menu API...');
+                const menuRes = await fetch('/api/food-menu');
+                const menuData = await menuRes.json();
+                console.log('Menu:', menuData);
+                
+                results.innerHTML = `
+                    <h2>API Results:</h2>
+                    <p>Students: ${studentsData.length}</p>
+                    <p>Today Duty: ${dutiesData.today ? 'Found' : 'Not Found'}</p>
+                    <p>Tomorrow Duty: ${dutiesData.tomorrow ? 'Found' : 'Not Found'}</p>
+                    <p>Today Menu: ${menuData ? 'Found' : 'Not Found'}</p>
+                    <pre>${JSON.stringify(dutiesData.today, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                results.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+        
+        testAPIs();
+    </script>
+</body>
+</html>

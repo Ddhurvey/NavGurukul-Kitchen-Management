@@ -1,31 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { hashPassword, createStudentSession } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, discordId, foodPreference } = await request.json()
+    const { name, email, password, foodPreference, workAssignment } = await request.json()
 
     // Validate input
-    if (!name || !email || !password) {
-      return NextResponse.json({ 
-        error: 'Name, email, and password are required' 
+    if (!name || !email || !password || !foodPreference || !workAssignment) {
+      return NextResponse.json({
+        error: 'All fields are required'
       }, { status: 400 })
     }
 
-    // Check if student already exists
-    const existingStudent = await db.student.findUnique({
+    if (password.length < 6) {
+      return NextResponse.json({
+        error: 'Password must be at least 6 characters long'
+      }, { status: 400 })
+    }
+
+    // Check if user already exists
+    const existingUser = await db.student.findUnique({
       where: { email }
     })
 
-    if (existingStudent) {
-      return NextResponse.json({ 
-        error: 'Student with this email already exists' 
+    if (existingUser) {
+      return NextResponse.json({
+        error: 'User with this email already exists'
       }, { status: 400 })
     }
 
     // Hash password
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     // Create new student
     const student = await db.student.create({
@@ -33,40 +39,36 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        discordId,
-        foodPreference: foodPreference || 'PANEER',
-        workType: 'KITCHEN',
-        status: 'ACTIVE'
+        foodPreference,
+        workAssignment,
+        isActive: true,
+        isPresent: true,
+        isTeamMember: workAssignment === 'Team',
+        isJobPlaced: false,
+        profileClosed: false
       }
     })
 
-    // Create session
-    const token = await createStudentSession(student.id)
-
-    // Update last login
-    await db.student.update({
-      where: { id: student.id },
-      data: { lastLoginAt: new Date() }
-    })
+    // Store password separately (in a real app, you'd add this to the student model)
+    // For now, we'll use a simple approach with a separate table or in-memory storage
+    // This is a simplified version - in production, you'd want proper password management
 
     return NextResponse.json({
+      success: true,
       message: 'Registration successful',
-      student: {
+      user: {
         id: student.id,
         name: student.name,
         email: student.email,
-        workType: student.workType,
-        status: student.status,
         foodPreference: student.foodPreference,
-        discordId: student.discordId
-      },
-      token
-    }, { status: 201 })
+        workAssignment: student.workAssignment
+      }
+    })
 
   } catch (error) {
     console.error('Registration error:', error)
-    return NextResponse.json({ 
-      error: 'Registration failed' 
+    return NextResponse.json({
+      error: 'Registration failed'
     }, { status: 500 })
   }
 }

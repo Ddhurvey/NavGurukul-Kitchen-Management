@@ -4,18 +4,6 @@ import { db } from '@/lib/db'
 export async function GET() {
   try {
     const students = await db.student.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        discordId: true,
-        foodPreference: true,
-        workType: true,
-        status: true,
-        joinedAt: true,
-        totalDuties: true,
-        lastDutyDate: true
-      },
       orderBy: {
         name: 'asc'
       }
@@ -31,16 +19,13 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    
+    const { name, email, foodPreference } = data
+
     const student = await db.student.create({
       data: {
-        name: data.name,
-        email: data.email,
-        password: data.password || 'temp123', // Default password for admin creation
-        discordId: data.discordId,
-        foodPreference: data.foodPreference || 'PANEER',
-        workType: data.workType || 'KITCHEN',
-        status: data.status || 'ACTIVE'
+        name,
+        email,
+        foodPreference
       }
     })
 
