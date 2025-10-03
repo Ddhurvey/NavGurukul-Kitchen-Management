@@ -1,147 +1,154 @@
-# 🔔 Discord Integration Setup Guide
+# Discord Configuration Guide
 
-## 📋 **Current Status**
+## 🔧 Setup Instructions
 
-✅ **Kitchen Team Assigned**: Today and tomorrow both have kitchen duty assignments  
-✅ **Discord Message Format**: Working perfectly  
-❌ **Actual Discord Sending**: Needs webhook setup  
+To enable Discord message sending, you need to configure either a Discord Webhook or a Discord Bot.
 
-## 🛠️ **Discord Setup Instructions**
+### Option 1: Discord Webhook (Recommended - Easier)
 
-### Step 1: Create Discord Webhook
+1. **Create a Discord Webhook:**
+   - Go to your Discord server settings
+   - Navigate to "Integrations" → "Webhooks"
+   - Click "Create Webhook"
+   - Choose the channel where messages should be sent
+   - Copy the Webhook URL
 
-1. **Open your Discord server**
-2. **Go to Server Settings** (click the server name dropdown)
-3. **Navigate to Integrations → Webhooks**
-4. **Click "New Webhook"**
-5. **Configure the webhook:**
-   - **Name**: NavGurukul Kitchen Duty Bot
-   - **Channel**: Select the channel where notifications should be sent
-   - **Avatar**: (Optional) Upload NavGurukul logo
-
-6. **Copy the Webhook URL** - It will look like:
+2. **Configure Environment Variables:**
+   Add to your `.env.local` file:
    ```
-   https://discord.com/api/webhooks/1234567890/AbCdEfGhIjKlMnOpQrStUvWxYz
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
    ```
 
-### Step 2: Set Environment Variable
+### Option 2: Discord Bot (More Features)
 
-Add the webhook URL to your environment:
+1. **Create a Discord Application:**
+   - Go to https://discord.com/developers/applications
+   - Click "New Application"
+   - Give it a name (e.g., "Kitchen Bot")
+   - Go to "Bot" section and click "Add Bot"
 
-```bash
-# For development (.env file)
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_URL
+2. **Get Bot Token:**
+   - Copy the bot token
+   - Enable "Message Content Intent" in bot settings
 
-# For production deployment
-# Set DISCORD_WEBHOOK_URL in your hosting platform's environment variables
+3. **Invite Bot to Server:**
+   - Go to "OAuth2" → "URL Generator"
+   - Select scopes: `bot`
+   - Select permissions: `Send Messages`, `Mention Everyone`, `Mention Users`
+   - Copy the generated URL and paste in browser to invite to your server
+
+4. **Get Channel ID:**
+   - In Discord, go to the channel where you want messages
+   - Right-click on the channel name and "Copy Channel ID"
+   - (Enable Developer Mode in Discord settings if you don't see this option)
+
+5. **Configure Environment Variables:**
+   Add to your `.env.local` file:
+   ```
+   DISCORD_BOT_TOKEN=YOUR_BOT_TOKEN
+   DISCORD_CHANNEL_ID=YOUR_CHANNEL_ID
+   ```
+
+### Option 3: User ID Mapping (For Proper Mentions)
+
+To make `@mentions` work properly, you need to map student names to Discord User IDs.
+
+1. **Get Discord User IDs:**
+   - In Discord, go to User Settings → Advanced → Enable Developer Mode
+   - Right-click on a user and "Copy User ID"
+
+2. **Update the mapping in `/src/lib/discord.ts`:**
+   ```typescript
+   const DISCORD_USER_MAPPING: { [key: string]: string } = {
+     'Govind': '123456789012345678', // Replace with actual Discord user ID
+     'Md Arhan Alam': '234567890123456789', // Replace with actual Discord user ID
+     'Diana Prince': '345678901234567890', // Replace with actual Discord user ID
+     'DevendraDhurvey(꧁रA1꧂)': '456789012345678901', // Replace with actual Discord user ID
+     // Add more mappings as needed
+   }
+   ```
+
+## 🧪 Testing
+
+1. **Test Discord Connection:**
+   ```bash
+   curl "http://localhost:3000/api/discord-message?test=true"
+   ```
+
+2. **Test Message Generation:**
+   - Go to the Discord Message section in the app
+   - Click "Generate Discord Message"
+   - Click "Send to Discord" (if configured)
+
+## 📝 Example .env.local
+
+```env
+# Discord Configuration (choose ONE option)
+
+# Option 1: Webhook (Recommended)
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/123456789012345678/abcdef123456789
+
+# Option 2: Bot Token
+# DISCORD_BOT_TOKEN=abcdefghijklmnopqrstuvwxyz123456
+# DISCORD_CHANNEL_ID=123456789012345678
+
+# Database
+DATABASE_URL="file:./dev.db"
+
+# NextAuth
+NEXTAUTH_SECRET=your-secret-here
+NEXTAUTH_URL=http://localhost:3000
 ```
 
-### Step 3: Test the Integration
+## 🔍 Troubleshooting
 
-```bash
-# Test Discord notification
-curl -X POST http://localhost:3000/api/discord-notify \
-  -H "Content-Type: application/json" \
-  -d '{"date":"2025-10-01T00:00:00.000Z"}'
+### Common Issues:
+
+1. **"Discord not configured" error:**
+   - Make sure environment variables are set correctly
+   - Restart the development server after changing .env.local
+
+2. **"Failed to send to Discord" error:**
+   - Check if webhook URL is valid and not expired
+   - Verify bot has proper permissions
+   - Make sure channel ID is correct
+
+3. **Mentions not working:**
+   - Update the DISCORD_USER_MAPPING with correct Discord User IDs
+   - Enable Developer Mode in Discord to copy User IDs
+
+4. **Bot not sending messages:**
+   - Check if bot is online and has proper permissions
+   - Verify the channel ID is correct
+   - Make sure bot token is valid
+
+### Debug Mode:
+
+Add this to your code to see detailed error messages:
+```typescript
+console.log('Discord Config:', {
+  hasWebhook: !!process.env.DISCORD_WEBHOOK_URL,
+  hasBotToken: !!process.env.DISCORD_BOT_TOKEN,
+  hasChannelId: !!process.env.DISCORD_CHANNEL_ID
+})
 ```
 
-## 📅 **Current Kitchen Assignments**
+## 🚀 Production Deployment
 
-### **Today's Kitchen Team** (October 1, 2025)
-- **👑 Team Lead**: Abhishek pal (Paneer 🧀)
-- **👥 Team Members**:
-  - Akash (Egg 🥚)
-  - Deep Tiwari (Paneer 🧀)
-  - Anurag Arya (Paneer 🧀)
+For production deployment:
 
-### **Tomorrow's Kitchen Team** (October 2, 2025)
-- **👑 Team Lead**: Abhishek pal (Paneer 🧀)
-- **👥 Team Members**:
-  - Akash (Egg 🥚)
-  - Deep Tiwari (Paneer 🧀)
-  - Anurag Arya (Paneer 🧀)
+1. Use environment variables in your hosting platform
+2. Never commit Discord tokens to git repository
+3. Use secure storage for webhook URLs and bot tokens
+4. Test Discord integration in production environment
 
-## 📨 **Discord Message Format**
+## 📱 Features Available
 
-When configured, the system will send messages like this:
-
-```
-🍳 Food menu for Tomorrow
-
-👑 Team Lead: @Abhishek pal
-👥 Team Members:
-• @Akash 🥚
-• @Deep Tiwari 🧀
-• @Anurag Arya 🧀
-
-🍽️ Menu:
-🌅 Breakfast: Upma
-🍛 Lunch: Chole+Rice
-🍿 Snacks: Samosa
-🌙 Dinner: Paneer+Roti
-
-📢 @Dharamshala Student (current)
-📝 Regards,
-Abhishek pal (F.C)
-```
-
-## ⚙️ **Automated Notifications**
-
-### Option 1: Manual Trigger
-Use the "Send Discord Notification" button on the dashboard
-
-### Option 2: Cron Job (Recommended)
-Set up a daily cron job to automatically send notifications:
-
-```bash
-# Send notification every day at 8 PM for tomorrow's duty
-0 20 * * * curl -X POST http://your-domain.com/api/discord-notify \
-  -H "Content-Type: application/json" \
-  -d '{"date":"'$(date -d tomorrow +%Y-%m-%d)'T00:00:00.000Z"}'
-```
-
-### Option 3: GitHub Actions (For Deployment)
-Create `.github/workflows/discord-notify.yml`:
-
-```yaml
-name: Daily Discord Notification
-on:
-  schedule:
-    - cron: '0 20 * * *'  # 8 PM daily
-jobs:
-  notify:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Send Discord Notification
-        run: |
-          curl -X POST ${{ secrets.API_URL }}/api/discord-notify \
-            -H "Content-Type: application/json" \
-            -d '{"date":"'$(date -d tomorrow +%Y-%m-%d)'T00:00:00.000Z"}'
-```
-
-## 🔧 **Troubleshooting**
-
-### Issue: "Discord webhook not configured"
-**Solution**: Set the `DISCORD_WEBHOOK_URL` environment variable
-
-### Issue: Message not sending to Discord
-**Solution**: 
-1. Check if webhook URL is correct
-2. Verify the webhook has permission to post in the channel
-3. Check server logs for error messages
-
-### Issue: Wrong kitchen team assigned
-**Solution**: Use the auto-assign feature or manually assign via dashboard
-
-## 🎯 **Next Steps**
-
-1. ✅ **Kitchen teams are assigned** for today and tomorrow
-2. ⏳ **Set up Discord webhook** (follow steps above)
-3. ⏳ **Configure environment variable**
-4. ⏳ **Test the integration**
-5. ⏳ **Set up automated daily notifications**
-
----
-
-**🎉 Your kitchen duty system is working perfectly! The only remaining step is Discord webhook configuration to enable actual message sending.**
+- ✅ Generate formatted Discord messages
+- ✅ Send messages via Webhook or Bot
+- ✅ Proper @mentions for team members
+- ✅ Team Leader (T.L) and IT indicators
+- ✅ Location and meal information
+- ✅ Error handling and status feedback
+- ✅ Custom message templates
+- ✅ Date-specific messages

@@ -1,80 +1,119 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+import jwt from 'jsonwebtoken'
 
-// Default password for existing users who don't have a password set
-const DEFAULT_PASSWORD = 'password123'
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
-
-    // Validate input
-    if (!email || !password) {
-      return NextResponse.json({
-        error: 'Email and password are required'
-      }, { status: 400 })
-    }
-
-    // Find user
-    const user = await db.student.findUnique({
-      where: { email }
-    })
-
-    if (!user) {
-      return NextResponse.json({
-        error: 'Invalid email or password'
-      }, { status: 401 })
-    }
-
-    // Check password
-    let isPasswordValid = false
+    const body = await request.json()
     
-    if (user.password) {
-      // User has a password set (registered through the system)
-      isPasswordValid = await bcrypt.compare(password, user.password)
-    } else {
-      // User doesn't have a password (existing user), use default password
-      if (password === DEFAULT_PASSWORD) {
-        isPasswordValid = true
-        
-        // Optionally set the default password for future logins
-        const hashedDefaultPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10)
-        await db.student.update({
-          where: { id: user.id },
-          data: { password: hashedDefaultPassword }
-        })
-      }
+    // Validate input
+    const validatedData = loginSchema.parse(body)
+    
+    // Find user
+    const user = await db.user.findUnique({
+      where: { email: validatedData.email }
+    })
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      )
     }
-
+    
+    // Check password
+    const isPasswordValid = await bcrypt.compare(validatedData.password, user.password)
+    
     if (!isPasswordValid) {
-      return NextResponse.json({
-        error: 'Invalid email or password'
-      }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      )
     }
-
-    // Return user data (excluding password)
-    return NextResponse.json({
+    
+    // Check if user is active
+    if (user.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { error: 'Account is not active. Please contact administrator.' },
+        { status: 401 }
+      )
+    }
+    
+    // Create JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role 
+      },
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '7d' }
+    )
+    
+    // Create response with user data (without password)
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      foodPreference: user.foodPreference,
+      totalKitchenTurns: user.totalKitchenTurns,
+      leaveDays: user.leaveDays,
+      rotationPosition: user.rotationPosition,
+      lastTurnDate: user.lastTurnDate,
+      createdAt: user.createdAt
+    }
+    
+    // Set HTTP-only cookie
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        foodPreference: user.foodPreference,
-        workAssignment: user.workAssignment,
-        isActive: user.isActive,
-        isPresent: user.isPresent,
-        isTeamMember: user.isTeamMember,
-        isJobPlaced: user.isJobPlaced,
-        profileClosed: user.profileClosed
+      user: userResponse
+    })
+    
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
+    })
+    
+    // Log the login
+    await db.historyLog.create({
+      data: {
+        action: 'USER_LOGIN',
+        updatedBy: user.id,
+        metadata: JSON.stringify({
+          loginTime: new Date().toISOString(),
+          userAgent: request.headers.get('user-agent') || 'Unknown'
+        })
       }
     })
-
+    
+    return response
+    
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json({
-      error: 'Login failed'
-    }, { status: 500 })
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      )
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to login' },
+      { status: 500 }
+    )
   }
 }

@@ -1,209 +1,141 @@
-# NavGurukul Kitchen Duty Management System
+# 🚀 Welcome to Z.ai Code Scaffold
 
-A comprehensive automated system for managing kitchen duties for students at NavGurukul. This system handles daily kitchen turn assignments, student profiles, food preferences, leave management, and automated notifications.
+A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
 
-## Features
+## ✨ Technology Stack
 
-### 🍳 Core System Requirements
+This scaffold provides a robust foundation built with:
 
-- **Daily Kitchen Turn Assignment**: Automatically assigns 4 different students every day
-- **Turn-by-turn System**: Ensures same students aren't assigned on consecutive days
-- **Active Student Filtering**: Only includes currently active and present students
-- **Leave Management**: Handles student leaves and automatically skips their kitchen turns
+### 🎯 Core Framework
+- **⚡ Next.js 15** - The React framework for production with App Router
+- **📘 TypeScript 5** - Type-safe JavaScript for better developer experience
+- **🎨 Tailwind CSS 4** - Utility-first CSS framework for rapid UI development
 
-### 👥 Student Profile Management
+### 🧩 UI Components & Styling
+- **🧩 shadcn/ui** - High-quality, accessible components built on Radix UI
+- **🎯 Lucide React** - Beautiful & consistent icon library
+- **🌈 Framer Motion** - Production-ready motion library for React
+- **🎨 Next Themes** - Perfect dark mode in 2 lines of code
 
-- **Complete Profiles**: Track name, email, food preference (egg/paneer)
-- **Duty History**: Record of all kitchen turns completed
-- **Leave Tracking**: Record of all leave days with reasons
-- **Job Placement**: Mark profiles as "closed" when students get jobs
-- **Team Member Exemptions**: Core team members are exempt from kitchen duties
+### 📋 Forms & Validation
+- **🎣 React Hook Form** - Performant forms with easy validation
+- **✅ Zod** - TypeScript-first schema validation
 
-### 🏆 User Roles and Permissions
+### 🔄 State Management & Data Fetching
+- **🐻 Zustand** - Simple, scalable state management
+- **🔄 TanStack Query** - Powerful data synchronization for React
+- **🌐 Axios** - Promise-based HTTP client
 
-#### Food Coordinator (FC)
-- **3-month Term**: Automatically tracks FC duration
-- **Duty Exemption**: FC is exempt from all kitchen duties
-- **Menu Management**: Authority to edit daily food menu
-- **Team Lead Assignment**: Can assign TL for each day's kitchen team
+### 🗄️ Database & Backend
+- **🗄️ Prisma** - Next-generation Node.js and TypeScript ORM
+- **🔐 NextAuth.js** - Complete open-source authentication solution
 
-#### Team Members
-- **Duty Exemption**: Core team members are exempt from kitchen duties
-- **Data Management**: Authority to remove student data from system
+### 🎨 Advanced UI Features
+- **📊 TanStack Table** - Headless UI for building tables and datagrids
+- **🖱️ DND Kit** - Modern drag and drop toolkit for React
+- **📊 Recharts** - Redefined chart library built with React and D3
+- **🖼️ Sharp** - High performance image processing
 
-#### All Students
-- **Swap Requests**: Can request to swap kitchen turns with other students
-- **Reason Tracking**: System records swap reasons (health issues, personal matters)
-- **Mutual Approval**: Both students must agree for swap approval
+### 🌍 Internationalization & Utilities
+- **🌍 Next Intl** - Internationalization library for Next.js
+- **📅 Date-fns** - Modern JavaScript date utility library
+- **🪝 ReactUse** - Collection of essential React hooks for modern development
 
-### 🔔 Automated Notifications
+## 🎯 Why This Scaffold?
 
-- **Daily Discord Messages**: Automatically sends next day's assignments and menu
-- **Formatted Messages**: Follows specific format with @mentions and menu details
-- **FC Signature**: Messages are signed by current Food Coordinator
+- **🏎️ Fast Development** - Pre-configured tooling and best practices
+- **🎨 Beautiful UI** - Complete shadcn/ui component library with advanced interactions
+- **🔒 Type Safety** - Full TypeScript configuration with Zod validation
+- **📱 Responsive** - Mobile-first design principles with smooth animations
+- **🗄️ Database Ready** - Prisma ORM configured for rapid backend development
+- **🔐 Auth Included** - NextAuth.js for secure authentication flows
+- **📊 Data Visualization** - Charts, tables, and drag-and-drop functionality
+- **🌍 i18n Ready** - Multi-language support with Next Intl
+- **🚀 Production Ready** - Optimized build and deployment settings
+- **🤖 AI-Friendly** - Structured codebase perfect for AI assistance
 
-### 📊 Menu and Data Management
+## 🚀 Quick Start
 
-- **Complete Menu Tracking**: Breakfast, lunch, snacks, and dinner options
-- **Food Preferences**: Tracks egg vs paneer preferences for Sunday meals
-- **Dashboard Analytics**: Total student count and relevant statistics
-- **History Tracking**: Complete history of all kitchen duty assignments
+```bash
+# Install dependencies
+npm install
 
-## Technology Stack
+# Start development server
+npm run dev
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript 5
-- **Database**: SQLite with Prisma ORM
-- **Styling**: Tailwind CSS 4 with shadcn/ui components
-- **UI Components**: Complete shadcn/ui component set with Lucide icons
-- **State Management**: Zustand for client state, TanStack Query for server state
+# Build for production
+npm run build
 
-## Installation and Setup
-
-### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set up the database:
-   ```bash
-   npm run db:push
-   npm run db:seed
-   ```
-
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## Database Schema
-
-The system uses the following main entities:
-
-- **Student**: Student profiles with preferences and status
-- **KitchenDuty**: Daily kitchen duty assignments
-- **DutyAssignment**: Individual student assignments to duties
-- **FoodCoordinator**: FC role assignments and terms
-- **FoodMenu**: Daily food menus managed by FC
-- **Leave**: Student leave requests and approvals
-- **SwapRequest**: Kitchen duty swap requests between students
-
-## API Endpoints
-
-### Students
-- `GET /api/students` - Get all eligible students
-- `POST /api/students` - Create new student
-
-### Kitchen Duties
-- `GET /api/kitchen-duty` - Get today's and tomorrow's duties
-- `POST /api/kitchen-duty` - Create new kitchen duty assignment
-- `POST /api/auto-assign` - Auto-assign kitchen duty for a date
-
-### Food Menu
-- `GET /api/food-menu` - Get today's food menu
-- `POST /api/food-menu` - Create new food menu
-- `PUT /api/food-menu` - Update existing food menu
-
-### Food Coordinator
-- `GET /api/food-coordinator` - Get current and all FC assignments
-- `POST /api/food-coordinator` - Assign new Food Coordinator
-
-### Leave Management
-- `GET /api/leaves` - Get all leave requests
-- `POST /api/leaves` - Create new leave request
-- `PUT /api/leaves` - Update leave status
-
-### Swap Requests
-- `GET /api/swap-requests` - Get all swap requests
-- `POST /api/swap-requests` - Create new swap request
-- `PUT /api/swap-requests` - Update swap request status
-
-### Discord Notifications
-- `POST /api/discord-notify` - Send Discord notification for tomorrow's duty
-
-## Key Features Implementation
-
-### Automatic Kitchen Duty Assignment
-
-The system automatically assigns kitchen duties using the following algorithm:
-
-1. **Eligibility Check**: Filters students who are active, present, not team members, and not job placed
-2. **Consecutive Day Prevention**: Excludes students who were on duty yesterday
-3. **Team Lead Selection**: Automatically assigns first student as Team Lead
-4. **Fallback Logic**: If not enough students after filtering, uses all eligible students
-
-### Leave Management System
-
-- **Automatic Status Updates**: When leave is approved, student presence status is updated
-- **Return Handling**: Students returning from leave have their next turn scheduled one week after return
-- **Reason Tracking**: All leaves include detailed reasons for record-keeping
-
-### Discord Integration
-
-The system formats Discord messages exactly as specified:
-
-```
-Food menu for Tomorrow
-
-@Vishwanath Nagwat- (T.L)
-@Govind
-@Bhavesh
-@Md Arhan Alam
-
-Breakfast:- Poha
-Lunch:- Dal+Rice
-Snacks:- (none)
-Dinner:- veg+roti
-
-@Dharamshala Student (current)
-Regards (F.C)
+# Start production server
+npm start
 ```
 
-## Dashboard Features
+Open [http://localhost:3000](http://localhost:3000) to see your application running.
 
-The main dashboard provides:
+## 🤖 Powered by Z.ai
 
-- **Real-time Statistics**: Total students, on leave, team members, job placed
-- **Today's Duty**: Current kitchen team with food preferences
-- **Tomorrow's Duty**: Upcoming assignments
-- **Food Menu**: Today's complete menu display
-- **Quick Actions**: Auto-assign duties, send notifications, refresh data
+This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
 
-## Development
+- **💻 Code Generation** - Generate components, pages, and features instantly
+- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
+- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
+- **📝 Documentation** - Auto-generate comprehensive documentation
+- **🚀 Optimization** - Performance improvements and best practices
 
-### Available Scripts
+Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run db:push` - Push database schema
-- `npm run db:seed` - Seed database with sample data
+## 📁 Project Structure
 
-### Database Management
+```
+src/
+├── app/                 # Next.js App Router pages
+├── components/          # Reusable React components
+│   └── ui/             # shadcn/ui components
+├── hooks/              # Custom React hooks
+└── lib/                # Utility functions and configurations
+```
 
-- `npm run db:generate` - Generate Prisma client
-- `npm run db:migrate` - Run database migrations
-- `npm run db:reset` - Reset database
+## 🎨 Available Features & Components
 
-## Contributing
+This scaffold includes a comprehensive set of modern web development tools:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+### 🧩 UI Components (shadcn/ui)
+- **Layout**: Card, Separator, Aspect Ratio, Resizable Panels
+- **Forms**: Input, Textarea, Select, Checkbox, Radio Group, Switch
+- **Feedback**: Alert, Toast (Sonner), Progress, Skeleton
+- **Navigation**: Breadcrumb, Menubar, Navigation Menu, Pagination
+- **Overlay**: Dialog, Sheet, Popover, Tooltip, Hover Card
+- **Data Display**: Badge, Avatar, Calendar
 
-## License
+### 📊 Advanced Data Features
+- **Tables**: Powerful data tables with sorting, filtering, pagination (TanStack Table)
+- **Charts**: Beautiful visualizations with Recharts
+- **Forms**: Type-safe forms with React Hook Form + Zod validation
 
-This project is part of NavGurukul's educational management system.
+### 🎨 Interactive Features
+- **Animations**: Smooth micro-interactions with Framer Motion
+- **Drag & Drop**: Modern drag-and-drop functionality with DND Kit
+- **Theme Switching**: Built-in dark/light mode support
+
+### 🔐 Backend Integration
+- **Authentication**: Ready-to-use auth flows with NextAuth.js
+- **Database**: Type-safe database operations with Prisma
+- **API Client**: HTTP requests with Axios + TanStack Query
+- **State Management**: Simple and scalable with Zustand
+
+### 🌍 Production Features
+- **Internationalization**: Multi-language support with Next Intl
+- **Image Optimization**: Automatic image processing with Sharp
+- **Type Safety**: End-to-end TypeScript with Zod validation
+- **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
+
+## 🤝 Get Started with Z.ai
+
+1. **Clone this scaffold** to jumpstart your project
+2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
+3. **Start building** with intelligent code generation and assistance
+4. **Deploy with confidence** using the production-ready setup
+
+---
+
+Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
