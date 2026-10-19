@@ -7,13 +7,16 @@ const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['STUDENT', 'FC', 'TEAM_MEMBER', 'ADMIN']).default('STUDENT'),
   foodPreference: z.enum(['PANEER', 'EGGS']).default('PANEER')
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    // Public registration must never be able to assign privileged roles.
+    if (body && typeof body === 'object' && 'role' in body && body.role !== undefined && body.role !== 'STUDENT') {
+      return NextResponse.json({ error: 'Public registration only supports the STUDENT role' }, { status: 403 })
+    }
     
     // Validate input
     const validatedData = registerSchema.parse(body)
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest) {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: validatedData.role,
+        role: 'STUDENT',
         foodPreference: validatedData.foodPreference,
         status: 'ACTIVE',
         totalKitchenTurns: 0,
