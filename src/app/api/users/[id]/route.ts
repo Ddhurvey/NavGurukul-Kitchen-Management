@@ -18,6 +18,9 @@ export async function GET(
     }
 
     const userId = params.id
+    if (userId !== decoded.userId && decoded.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // Get user profile with kitchen and leave history
     const user = await db.user.findUnique({
