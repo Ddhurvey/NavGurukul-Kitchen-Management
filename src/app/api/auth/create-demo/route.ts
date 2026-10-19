@@ -3,6 +3,9 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
 export async function POST() {
+  if (process.env.NODE_ENV === 'production' || process.env.DEMO_SETUP_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Demo account setup is disabled' }, { status: 404 })
+  }
   try {
     // Check if demo user already exists
     const existingDemoUser = await db.user.findUnique({
