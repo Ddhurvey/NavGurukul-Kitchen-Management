@@ -56,15 +56,9 @@ export async function GET(request: NextRequest) {
       }),
       
       // Pending swap requests (safe)
-      (async () => {
-        try {
-          return db.swapRequest ? await db.swapRequest.count({
-            where: { status: 'PENDING' }
-          }) : 0
-        } catch {
-          return 0
-        }
-      })(),
+      db.exchangeRequest.count({
+        where: { status: 'PENDING' }
+      }),
       
       // Scheduled notifications
       db.scheduledNotification.count({
@@ -84,10 +78,10 @@ export async function GET(request: NextRequest) {
       
       // Recent history logs
       db.historyLog.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { timestamp: 'desc' },
         take: 10,
         include: {
-          user: {
+          updatedByUser: {
             select: {
               name: true,
               email: true
@@ -196,8 +190,8 @@ export async function GET(request: NextRequest) {
       recentActivity: recentHistoryLogs.map(log => ({
         id: log.id,
         action: log.action,
-        updatedAt: log.createdAt,
-        user: log.user?.name || 'System',
+        updatedAt: log.timestamp,
+        user: log.updatedByUser?.name || 'System',
         metadata: log.metadata
       })),
       healthChecks: {
