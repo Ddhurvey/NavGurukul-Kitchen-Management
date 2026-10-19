@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 import { z } from 'zod'
 
 const createKitchenTurnSchema = z.object({
@@ -9,6 +10,8 @@ const createKitchenTurnSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const body = await request.json()
     const { date, studentIds, teamLeaderId } = createKitchenTurnSchema.parse(body)
