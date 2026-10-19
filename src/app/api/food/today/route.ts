@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth, requireRole } from '@/lib/auth'
 import { getIndiaToday, isIndiaPast9PM } from '@/lib/time'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const today = getIndiaToday()
     
@@ -68,6 +71,8 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
     const { breakfast, lunch, snacks, dinner, updatedBy } = await request.json()
     
