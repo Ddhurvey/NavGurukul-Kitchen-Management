@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { requireAuth, requireRole } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const users = await db.user.findMany({
       select: {
@@ -33,8 +36,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
-    const { name, email, password, role = 'STUDENT', foodPreference = 'PANEER' } = await request.json()
+    const { name, email, password, foodPreference = 'PANEER' } = await request.json()
+    const role = 'STUDENT'
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({
@@ -77,7 +83,7 @@ export async function POST(request: NextRequest) {
     await db.historyLog.create({
       data: {
         action: 'USER_CREATED',
-        updatedBy: user.id,
+        updatedBy: auth.user.id,
         metadata: JSON.stringify({
           userId: user.id,
           name,
