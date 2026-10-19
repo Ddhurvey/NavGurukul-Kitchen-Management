@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const { date, numberOfStudents = 3, force = false } = await request.json()
     
@@ -150,7 +153,7 @@ export async function POST(request: NextRequest) {
     await db.historyLog.create({
       data: {
         action: isSunday ? 'SUNDAY_EGG_RULE_ASSIGNMENT' : 'ROUND_ROBIN_ASSIGNMENT',
-        updatedBy: 'SYSTEM',
+        updatedBy: auth.user.id,
         metadata: JSON.stringify({
           date: targetDate,
           assignedStudents: selectedStudents.map(s => s.id),
