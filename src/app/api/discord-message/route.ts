@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 import { getIndiaToday, formatIndiaDate } from '@/lib/time'
 import { addDays } from '@/lib/utils'
 import { sendDiscordMessage, convertToDiscordMentions, testDiscordConnection, createDiscordEmbed } from '@/lib/discord'
 
 export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC', 'TEAM_MEMBER'])
+  if (!auth.user) return auth.response
   try {
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get('date')
@@ -114,6 +117,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC', 'TEAM_MEMBER'])
+  if (!auth.user) return auth.response
   try {
     const { date, customMessage, includeLocation, includeTeamDetails, sendToDiscord = false } = await request.json()
     
