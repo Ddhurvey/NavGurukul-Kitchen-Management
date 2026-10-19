@@ -220,7 +220,8 @@ async function handleImmediateReassignment(date: Date, excludedStudentId: string
 
 async function sendImmediateReassignmentNotification(assignment: any, replacementStudent: any, excludedStudentId: string) {
   try {
-    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1422903085680033853/mVeuOQhZk7ocLABZG1fTPcNWf4I5rx98gvRYkjSPZx27rzgkdQamXJIPOW7fJLV5nCPF'
+    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
+    if (!DISCORD_WEBHOOK_URL) return
     
     const message = `Kitchen Duty Reassignment for Tomorrow\n\n` +
       `@${replacementStudent.name.replace(/\s+/g, '-')}- ( ${replacementStudent.foodPreference} )\n\n` +
@@ -248,7 +249,8 @@ async function sendImmediateReassignmentNotification(assignment: any, replacemen
 
 async function sendLeaveApprovalNotification(leave: any, approvedBy: string, isAssignedTomorrow: boolean, isPast9PM: boolean) {
   try {
-    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1422903085680033853/mVeuOQhZk7ocLABZG1fTPcNWf4I5rx98gvRYkjSPZx27rzgkdQamXJIPOW7fJLV5nCPF'
+    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
+    if (!DISCORD_WEBHOOK_URL) return
     
     const startDate = new Date(leave.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     const endDate = new Date(leave.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
