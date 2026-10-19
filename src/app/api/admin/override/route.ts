@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
-    const { action, adminId, data } = await request.json()
-    
-    // Verify admin privileges (in a real app, you'd check session/auth)
-    const admin = await db.user.findUnique({
-      where: { id: adminId }
-    })
-    
-    if (!admin || (admin.role !== 'ADMIN' && admin.role !== 'FC' && admin.role !== 'TEAM_MEMBER')) {
-      return NextResponse.json(
-        { error: 'Insufficient privileges' },
-        { status: 403 }
-      )
-    }
+    const { action, data } = await request.json()
+    const adminId = auth.user.id
 
     let result
     

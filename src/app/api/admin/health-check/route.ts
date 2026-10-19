@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getIndiaToday, isIndiaPast9PM } from '@/lib/time'
+import { requireRole } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const healthStatus = {
       status: 'healthy',
@@ -326,6 +329,8 @@ export async function GET() {
 
 // POST endpoint to run specific health checks
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const { checks } = await request.json()
     

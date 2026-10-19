@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/auth/me')
+      const response = await fetch('/api/auth/me', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
         setUser(data.user)
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(data),
       })
 
-      const responseData = await response.json()
+      const responseData = await response.json().catch(() => ({}))
 
       if (response.ok) {
         // After successful registration, log the user in
@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
+        cache: 'no-store',
       })
       setUser(null)
     } catch (error) {

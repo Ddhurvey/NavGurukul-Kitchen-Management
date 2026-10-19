@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
-import jwt from 'jsonwebtoken'
+import { createAuthToken, getJwtSecret } from '@/lib/auth'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -46,16 +46,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Create JWT token
-    const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
-      },
-      process.env.JWT_SECRET || 'fallback-secret-key',
-      { expiresIn: '7d' }
-    )
+    // Fail closed if the deployment has not configured a strong signing secret.
+    getJwtSecret()
+    const token = createAuthToken({ id: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion })
     
     // Create response with user data (without password)
     const userResponse = {
@@ -83,7 +76,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60, // Cookie maxAge is in seconds
       path: '/'
     })
     
@@ -103,6 +96,9 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Login error:', error)
+    if (error instanceof Error && error.message.includes('JWT_SECRET')) {
+      return NextResponse.json({ error: 'Authentication is not configured on this server' }, { status: 503 })
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

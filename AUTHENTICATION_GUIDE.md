@@ -1,376 +1,79 @@
-# NavGurukul Kitchen Management System - Authentication Guide
+# Authentication and Session Security
 
-## 🔐 Authentication System Overview
+## Overview
 
-The NavGurukul Kitchen Management System now includes a complete authentication system with user registration, login, logout, and protected routes.
+The application uses bcrypt password hashes, signed JWTs in HTTP-only cookies, database-backed account status checks, and role-based API authorization.
 
-## 🚀 Features Implemented
+## Required environment
 
-### ✅ Authentication Features
-- **User Registration** - Complete signup with validation
-- **User Login** - Secure authentication with JWT tokens
-- **User Logout** - Secure session termination
-- **Protected Routes** - Authentication required for main app
-- **Role-based Access** - Admin-only settings section
-- **Demo User Setup** - Quick demo account creation
+Copy `.env.example` to `.env.local` for local development. Never commit real secrets.
 
-### ✅ Security Features
-- **Password Hashing** - bcryptjs for secure password storage
-- **JWT Tokens** - Secure session management
-- **HTTP-only Cookies** - Protected token storage
-- **Input Validation** - Zod schema validation
-- **Role-based Authorization** - Admin access control
+- `DATABASE_URL`: Prisma database connection.
+- `JWT_SECRET`: required, at least 32 characters; use a cryptographically random value (for example, `openssl rand -base64 48`). There is no fallback secret. Login fails closed if it is missing or too short.
+- `ADMIN_RESET_KEY`: legacy tooling key. Do not expose it to client code or use a `NEXT_PUBLIC_` prefix.
+- `DEMO_SETUP_ENABLED`: demo setup is disabled by default and must not be enabled in production.
 
-## 📁 File Structure
+## Database update
 
-```
-src/
-├── app/
-│   ├── api/auth/
-│   │   ├── login/route.ts          # Login API endpoint
-│   │   ├── logout/route.ts         # Logout API endpoint
-│   │   ├── register/route.ts       # Registration API endpoint
-│   │   ├── me/route.ts             # User session check API
-│   │   └── create-demo/route.ts    # Demo user creation API
-│   ├── login/page.tsx              # Login page
-│   ├── signup/page.tsx             # Signup page
-│   ├── setup-demo/page.tsx         # Demo setup page
-│   └── page.tsx                    # Protected main page
-├── contexts/
-│   └── AuthContext.tsx             # Authentication context
-└── lib/
-    └── db.ts                       # Database connection
+The `User.tokenVersion` field supports server-side session revocation. After pulling these changes, update the Prisma client and local database:
+
+```bash
+npm install
+npx prisma generate
+npx prisma db push
 ```
 
-## 🔑 API Endpoints
+For production, apply the equivalent schema change through your normal reviewed migration/deployment process before deploying application code. Back up the database first.
 
-### POST /api/auth/register
-Registers a new user and initializes the system if it's the first student.
+## Session and token behavior
 
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "role": "STUDENT",
-  "foodPreference": "PANEER"
-}
+- Tokens use HS256, an explicit issuer and audience, and a seven-day expiry.
+- The cookie is HTTP-only, SameSite=Lax, Secure in production, and scoped to `/`.
+- Cookie `maxAge` is expressed in seconds.
+- Each token includes the user's `tokenVersion`. Protected requests verify the signature and expiry, then check the current user status and token version in the database.
+- Logout increments `tokenVersion`, invalidating the current token server-side, and clears the browser cookie.
+- Current role and email are loaded from the database; stale role claims in an old JWT are not trusted.
+- Public registration creates only `STUDENT` accounts. Privileged roles must be granted by an authorized administrator through a trusted process.
+
+## Authentication API
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /api/auth/register` | Creates a student account; rejects attempts to request privileged roles |
+| `POST /api/auth/login` | Verifies credentials and issues a session cookie |
+| `POST /api/auth/logout` | Invalidates the session and clears the cookie |
+| `GET /api/auth/me` | Returns the current active user when the session is valid |
+
+The shared helpers in `src/lib/auth.ts` provide `getJwtSecret`, `createAuthToken`, `verifyToken`, `requireAuth`, and `requireRole`. Use these in API handlers rather than trusting user IDs or roles from request bodies.
+
+## Authorization guidance
+
+Administrative/destructive endpoints should use `requireRole(request, ['ADMIN'])`. Never authorize an operation based on a caller-supplied `adminId`, role field, or an admin key sent from a browser. API endpoints that read or mutate personal, kitchen, roster, leave, food-menu, or student data must enforce authentication and the appropriate role at the server, even if the frontend redirects unauthenticated users.
+
+The dashboard's client-side route checks are a usability layer, not an authorization boundary.
+
+## Frontend session flow
+
+1. `AuthProvider` calls `GET /api/auth/me` during initial load.
+2. Login sends credentials to `POST /api/auth/login`; the browser stores the HTTP-only cookie automatically.
+3. Protected pages wait for the initial auth check before deciding whether to redirect.
+4. Logout calls `POST /api/auth/logout`, clears client state, and navigates to the login page.
+
+Never store JWTs in localStorage or expose them to client JavaScript.
+
+## Tests
+
+Run focused authentication tests with:
+
+```bash
+npm test
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "user": {
-    "id": "user_id",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "STUDENT",
-    "status": "ACTIVE",
-    "foodPreference": "PANEER",
-    "totalKitchenTurns": 0,
-    "leaveDays": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
+These cover missing/short secrets and token claims. Integration tests should also cover registration role escalation, expired/tampered tokens, inactive users, logout revocation, and authorization failures against a test database.
 
-### POST /api/auth/login
-Authenticates a user and creates a session.
+## Operational notes
 
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "user": {
-    "id": "user_id",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "STUDENT",
-    "status": "ACTIVE",
-    "foodPreference": "PANEER",
-    "totalKitchenTurns": 1,
-    "leaveDays": 0,
-    "rotationPosition": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
-
-### POST /api/auth/logout
-Logs out the current user and clears the session.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Logout successful"
-}
-```
-
-### GET /api/auth/me
-Returns the current authenticated user's information.
-
-**Response:**
-```json
-{
-  "success": true,
-  "user": {
-    "id": "user_id",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "STUDENT",
-    "status": "ACTIVE",
-    "foodPreference": "PANEER",
-    "totalKitchenTurns": 1,
-    "leaveDays": 0,
-    "rotationPosition": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
-
-### POST /api/auth/create-demo
-Creates a demo user for testing purposes.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Demo user created successfully",
-  "user": {
-    "id": "demo_user_id",
-    "name": "Demo Student",
-    "email": "demo@navgurukul.org",
-    "role": "STUDENT"
-  }
-}
-```
-
-## 🎯 User Roles
-
-### STUDENT
-- Can view dashboard
-- Can view profile
-- Can view kitchen assignments
-- Can view food menu
-- Cannot access settings
-
-### ADMIN
-- All STUDENT permissions
-- Can access system settings
-- Can view system health
-- Can perform administrative actions
-
-### FC / TEAM_MEMBER
-- Same permissions as STUDENT
-- Future features can be added for these roles
-
-## 🔄 Authentication Flow
-
-### 1. User Registration
-1. User fills out registration form
-2. Client validates input
-3. POST request to `/api/auth/register`
-4. Server validates and creates user
-5. If first student, initializes rotation system
-6. Returns user data
-7. Auto-logs in the user
-
-### 2. User Login
-1. User enters credentials
-2. Client validates input
-3. POST request to `/api/auth/login`
-4. Server validates credentials
-5. Creates JWT token
-6. Sets HTTP-only cookie
-7. Returns user data
-8. Redirects to dashboard
-
-### 3. Protected Route Access
-1. User tries to access protected page
-2. AuthProvider checks authentication
-3. If not authenticated, redirects to login
-4. If authenticated, shows content
-
-### 4. User Logout
-1. User clicks logout
-2. POST request to `/api/auth/logout`
-3. Server clears session
-4. Client clears user state
-5. Redirects to login page
-
-## 🛡️ Security Measures
-
-### Password Security
-- All passwords are hashed using bcryptjs
-- Salt rounds: 12
-- Passwords are never stored in plain text
-
-### Session Security
-- JWT tokens with 7-day expiration
-- HTTP-only cookies prevent XSS attacks
-- Secure cookies in production
-- SameSite protection against CSRF
-
-### Input Validation
-- Zod schemas for all API inputs
-- Email format validation
-- Password length requirements
-- Role and food preference validation
-
-### Authorization
-- Role-based access control
-- Admin-only routes protection
-- User data isolation
-
-## 🎨 UI Components
-
-### Login Page (`/login`)
-- Email and password fields
-- Show/hide password toggle
-- Demo account information
-- Link to signup page
-- Error handling and loading states
-
-### Signup Page (`/signup`)
-- Full name, email, password fields
-- Role selection dropdown
-- Food preference selection
-- Password confirmation
-- Auto-login after registration
-
-### Demo Setup Page (`/setup-demo`)
-- One-click demo user creation
-- Automatic system initialization
-- Visual feedback and progress
-- Redirect to login after creation
-
-### Main Application (`/`)
-- Protected route
-- User profile in header
-- Logout functionality
-- Role-based navigation
-- Authentication state management
-
-## 🚀 Quick Start Guide
-
-### 1. Setup Demo Account
-1. Navigate to `/setup-demo`
-2. Click "Create Demo User"
-3. Wait for creation confirmation
-4. Redirect to login page
-
-### 2. Login with Demo Account
-1. Go to `/login`
-2. Use demo credentials:
-   - Email: `demo@navgurukul.org`
-   - Password: `demo123`
-3. Click "Sign In"
-4. Redirect to dashboard
-
-### 3. Create New Account
-1. Go to `/signup`
-2. Fill in registration form
-3. Select role and food preference
-4. Click "Create Account"
-5. Auto-login and redirect to dashboard
-
-### 4. Access Admin Features
-1. Create an admin user or update existing user role to "ADMIN"
-2. Login with admin credentials
-3. Access "Settings" in sidebar
-4. View system health and administrative tools
-
-## 🔧 Environment Variables
-
-Required environment variables for authentication:
-
-```env
-# JWT Secret for token signing
-JWT_SECRET=your-super-secret-jwt-key-here
-
-# Admin reset key for system operations
-ADMIN_RESET_KEY=your-admin-reset-key-here
-
-# Database URL
-DATABASE_URL=file:./dev.db
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### 1. Login Fails with "Invalid email or password"
-- Check email and password spelling
-- Ensure user is registered
-- Check if user status is "ACTIVE"
-
-#### 2. Registration Fails with "User with this email already exists"
-- Try logging in with existing account
-- Use different email address
-- Contact admin to reset account
-
-#### 3. Redirect Loop on Main Page
-- Check browser cookies are enabled
-- Clear browser cache and cookies
-- Check JWT_SECRET is set
-
-#### 4. Demo User Creation Fails
-- Check database connection
-- Ensure database schema is up to date
-- Check server logs for errors
-
-### Debug Mode
-
-To enable debug logging, add to your environment:
-```env
-DEBUG=auth:*
-```
-
-## 📝 Development Notes
-
-### Authentication Context
-The `AuthContext` provides:
-- Current user state
-- Loading states
-- Login/logout functions
-- Registration function
-- Authentication status
-
-### Protected Routes
-Routes are protected at the component level:
-- Check authentication status
-- Redirect to login if not authenticated
-- Show loading state during auth check
-
-### Database Integration
-Authentication integrates with existing database:
-- Uses existing User model
-- Maintains data consistency
-- Handles foreign key constraints
-
-## 🎉 Summary
-
-The authentication system is now fully integrated with the NavGurukul Kitchen Management System. It provides:
-
-- ✅ Secure user authentication
-- ✅ Role-based access control
-- ✅ Demo user setup for testing
-- ✅ Protected routes and API endpoints
-- ✅ Beautiful and responsive UI
-- ✅ Comprehensive error handling
-- ✅ Integration with existing kitchen management features
-
-The system is ready for production use and can handle multiple users with different roles while maintaining security and data integrity.
+- Rotate `JWT_SECRET` if it may have been exposed; this invalidates all sessions signed with the old secret.
+- Set `JWT_SECRET` consistently across all app instances.
+- Do not log passwords, JWTs, cookie values, or secrets.
+- A logout request clears the browser cookie even when there is no valid session token.

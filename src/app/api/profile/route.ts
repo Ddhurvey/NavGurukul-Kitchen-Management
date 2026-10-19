@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { requireAuth } from '@/lib/auth'
 
 // Validation schemas
 const updateProfileSchema = z.object({
@@ -21,6 +22,8 @@ const leaveRequestSchema = z.object({
 })
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
@@ -30,6 +33,10 @@ export async function GET(request: NextRequest) {
         { error: 'User ID is required' },
         { status: 400 }
       )
+    }
+
+    if (userId !== auth.user.id && auth.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get user profile with comprehensive data
@@ -142,6 +149,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
@@ -152,6 +161,10 @@ export async function PUT(request: NextRequest) {
         { error: 'User ID is required' },
         { status: 400 }
       )
+    }
+
+    if (userId !== auth.user.id && auth.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get current user data

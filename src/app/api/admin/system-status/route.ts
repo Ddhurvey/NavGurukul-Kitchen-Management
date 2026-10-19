@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getIndiaToday } from '@/lib/time'
+import { requireRole } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const today = getIndiaToday()
     
@@ -216,15 +219,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
-    const { adminKey, action } = await request.json()
-    
-    if (adminKey !== process.env.ADMIN_RESET_KEY) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { action } = await request.json()
 
     let result = {}
 
@@ -255,8 +253,8 @@ export async function POST(request: NextRequest) {
         // Trigger full reset
         const resetResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/reset`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminKey })
+          headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') || '' },
+          body: JSON.stringify({})
         })
         
         if (resetResponse.ok) {
@@ -270,8 +268,8 @@ export async function POST(request: NextRequest) {
         // Reset notification system
         const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/notifications/reset`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminKey })
+          headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') || '' },
+          body: JSON.stringify({})
         })
         
         if (notificationResponse.ok) {
