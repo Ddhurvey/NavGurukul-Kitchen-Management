@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { requireAuth } from '@/lib/auth'
 
 const swapRequestSchema = z.object({
   fromStudentId: z.string(),
@@ -11,9 +12,14 @@ const swapRequestSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const body = await request.json()
     const validatedData = swapRequestSchema.parse(body)
+    if (auth.user.id !== validatedData.fromStudentId && !['ADMIN', 'FC'].includes(auth.user.role)) {
+      return NextResponse.json({ error: 'You can only request a swap for your own assignment' }, { status: 403 })
+    }
 
     // Check if both students exist and are active
     const [fromStudent, toStudent] = await Promise.all([
@@ -198,6 +204,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
@@ -205,10 +213,22 @@ export async function GET(request: NextRequest) {
 
     let whereClause: any = {}
 
-    if (studentId) {
+    if (studentId && !['ADMIN', 'FC'].includes(auth.user.role)) {
+      whereClause.OR = [
+        { fromStudentId: auth.user.id },
+        { toStudentId: auth.user.id }
+      ]
+    } else if (studentId) {
       whereClause.OR = [
         { fromStudentId: studentId },
         { toStudentId: studentId }
+      ]
+    }
+
+    if (!studentId && !['ADMIN', 'FC'].includes(auth.user.role)) {
+      whereClause.OR = [
+        { fromStudentId: auth.user.id },
+        { toStudentId: auth.user.id }
       ]
     }
 
