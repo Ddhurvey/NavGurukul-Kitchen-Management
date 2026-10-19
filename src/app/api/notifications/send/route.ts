@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendDiscordNotification } from '@/lib/discord';
 import { formatTodayMenuNotification, formatKitchenTeamMessage } from '@/lib/discord';
-import { verifyToken } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {

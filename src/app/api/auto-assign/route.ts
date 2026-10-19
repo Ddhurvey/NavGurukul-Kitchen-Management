@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { KitchenDutyScheduler } from '@/lib/kitchen-duty-scheduler'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const data = await request.json()
     const { daysAhead = 1, date } = data
@@ -103,7 +106,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     // Get upcoming assignments for the next 7 days
     const today = new Date()

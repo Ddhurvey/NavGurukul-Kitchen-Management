@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 import { getIndiaTomorrow, formatIndiaDate } from '@/lib/time'
 
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1422903085680033853/mVeuOQhZk7ocLABZG1fTPcNWf4I5rx98gvRYkjSPZx27rzgkdQamXJIPOW7fJLV5nCPF'
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
+  if (!DISCORD_WEBHOOK_URL) return NextResponse.json({ error: 'Discord webhook is not configured' }, { status: 503 })
   try {
     const { type = 'daily' } = await request.json()
 
@@ -226,7 +230,10 @@ function createDiscordMessage(kitchenTurn: any, foodMenu: any) {
 }
 
 // Test endpoint
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
+  if (!DISCORD_WEBHOOK_URL) return NextResponse.json({ error: 'Discord webhook is not configured' }, { status: 503 })
   try {
     const testMessage = {
       content: '**Test Message from NavGurukul Kitchen Bot**\n\nThis is a test notification to verify the Discord webhook is working correctly.\n\n@Dharamshala Student (current)\nRegards,\n(F.C)',
