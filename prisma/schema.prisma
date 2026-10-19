@@ -12,6 +12,7 @@ model User {
   email                      String                 @unique
   name                       String
   password                   String
+  tokenVersion               Int                    @default(0)
   role                       UserRole               @default(STUDENT)
   status                     UserStatus             @default(ACTIVE)
   foodPreference             FoodPreference         @default(PANEER)
