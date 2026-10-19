@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const { date, numberOfStudents = 4 } = await request.json()
     
@@ -141,7 +144,9 @@ export async function POST(request: NextRequest) {
 }
 
 // Get assignment statistics
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const stats = await db.user.groupBy({
       by: ['totalKitchenTurns'],
