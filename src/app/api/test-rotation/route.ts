@@ -7,14 +7,14 @@ export async function GET() {
   }
   try {
     // Test if the dutyRotation table exists and works
-    const rotationCount = await db.dutyRotation.count()
-    const rotations = await db.dutyRotation.findMany()
+    const rotationCount = await db.rotationCycle.count()
+    const rotations = await db.rotationCycle.findMany()
     
     return NextResponse.json({
       success: true,
       rotationCount,
       rotations,
-      message: 'Duty rotation table is accessible'
+      message: 'Rotation cycle table is accessible'
     })
   } catch (error) {
     console.error('Error accessing duty rotation table:', error)
