@@ -20,6 +20,14 @@ export interface AuthenticatedUser {
   role: string
   status: string
   tokenVersion: number
+  foodPreference: string
+  totalKitchenTurns: number
+  leaveDays: number
+  discordId?: string | null
+  rotationPosition: number
+  lastTurnDate?: Date | string | null
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export function getJwtSecret(): string {
@@ -75,7 +83,7 @@ export async function requireAuth(request: NextRequest): Promise<
 
   const user = await db.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, name: true, email: true, role: true, status: true, tokenVersion: true }
+    select: { id: true, name: true, email: true, role: true, status: true, tokenVersion: true, foodPreference: true, totalKitchenTurns: true, leaveDays: true, discordId: true, rotationPosition: true, lastTurnDate: true, createdAt: true, updatedAt: true }
   })
   if (!user || user.status !== 'ACTIVE') {
     return { response: NextResponse.json({ error: 'Account is not active' }, { status: 401 }) }
