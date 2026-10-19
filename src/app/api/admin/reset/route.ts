@@ -198,7 +198,9 @@ async function assignFirstDuty(user: any, date: Date, cycleId: string) {
 }
 
 // GET endpoint to check reset status
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const stats = await Promise.all([
       db.kitchenTurn.count(),
