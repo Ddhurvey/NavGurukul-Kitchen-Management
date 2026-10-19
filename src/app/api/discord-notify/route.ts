@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
-const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1422903085680033853/mVeuOQhZk7ocLABZG1fTPcNWf4I5rx98gvRYkjSPZx27rzgkdQamXJIPOW7fJLV5nCPF'
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
+  if (!DISCORD_WEBHOOK_URL) return NextResponse.json({ error: 'Discord webhook is not configured' }, { status: 503 })
   try {
     const data = await request.json()
     const { date } = data
@@ -106,7 +110,9 @@ Good luck with your kitchen duty! 🎉`
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     // Get recent notifications
     const notifications = await db.notification.findMany({
