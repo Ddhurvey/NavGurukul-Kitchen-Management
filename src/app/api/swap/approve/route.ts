@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { sendDiscordNotification } from '@/lib/discord'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
-    const { swapRequestId, approvedBy, comments } = await request.json()
+    const { swapRequestId, comments } = await request.json()
+    const approvedBy = auth.user.id
     
     if (!swapRequestId || !approvedBy) {
       return NextResponse.json(
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Execute the swap
-    await executeSwap(swapRequest)
+    await executeSwap(swapRequest, auth.user.id)
 
     // Log the approval
     await db.historyLog.create({
@@ -108,7 +112,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function executeSwap(swapRequest: any) {
+async function executeSwap(swapRequest: any, actorId: string) {
   try {
     const { fromStudentId, toStudentId, kitchenTurnId } = swapRequest
 
@@ -153,7 +157,7 @@ async function executeSwap(swapRequest: any) {
     await db.historyLog.create({
       data: {
         action: 'SWAP_EXECUTED',
-        updatedBy: 'SYSTEM',
+        updatedBy: actorId,
         metadata: JSON.stringify({
           swapRequestId: swapRequest.id,
           fromStudentId,
