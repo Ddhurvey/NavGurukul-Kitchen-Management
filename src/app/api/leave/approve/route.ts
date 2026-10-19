@@ -71,8 +71,6 @@ export async function POST(request: NextRequest) {
       data: {
         status: 'APPROVED',
         approvedBy,
-        approvedAt: new Date(),
-        comments
       }
     })
 
