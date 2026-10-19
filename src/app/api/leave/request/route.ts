@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const { studentId, reason, startDate, endDate, isEmergency = false } = await request.json()
+    if (auth.user.id !== studentId && !['ADMIN', 'FC'].includes(auth.user.role)) {
+      return NextResponse.json({ error: 'You can only submit leave for your own account' }, { status: 403 })
+    }
     
     // Parse dates
     const start = new Date(startDate)
@@ -70,12 +76,12 @@ export async function POST(request: NextRequest) {
     
     // If emergency and student is assigned tomorrow, reassign immediately
     if (isEmergency && isAssignedTomorrow) {
-      await handleEmergencyReassignment(tomorrow, studentId)
+      await handleEmergencyReassignment(tomorrow, studentId, auth.user.id)
     }
     
     // If leave is approved before 9 PM and student is assigned tomorrow, reassign immediately
     if (!isEmergency && isAssignedTomorrow && !isPast9PM && leave.status === 'APPROVED') {
-      await handleImmediateReassignment(tomorrow, studentId, leave.id)
+      await handleImmediateReassignment(tomorrow, studentId, leave.id, auth.user.id)
     }
     
     // Log the leave request
@@ -117,13 +123,19 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
     const status = searchParams.get('status')
     
     const where: any = {}
-    if (studentId) where.studentId = studentId
+    if (auth.user.role === 'ADMIN' || auth.user.role === 'FC') {
+      if (studentId) where.studentId = studentId
+    } else {
+      where.studentId = auth.user.id
+    }
     if (status) where.status = status
     
     const leaves = await db.leave.findMany({
@@ -152,7 +164,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function handleImmediateReassignment(date: Date, excludedStudentId: string, leaveId: string) {
+async function handleImmediateReassignment(date: Date, excludedStudentId: string, leaveId: string, actorId: string) {
   try {
     // Get tomorrow's assignment
     const assignment = await db.kitchenTurn.findUnique({
@@ -234,7 +246,7 @@ async function handleImmediateReassignment(date: Date, excludedStudentId: string
     await db.historyLog.create({
       data: {
         action: 'IMMEDIATE_REASSIGNMENT_APPROVED_LEAVE',
-        updatedBy: 'SYSTEM',
+        updatedBy: actorId,
         metadata: JSON.stringify({
           date,
           excludedStudentId,
@@ -279,7 +291,7 @@ async function sendImmediateReassignmentNotification(assignment: any, replacemen
   }
 }
 
-async function handleEmergencyReassignment(date: Date, excludedStudentId: string) {
+async function handleEmergencyReassignment(date: Date, excludedStudentId: string, actorId: string) {
   try {
     // Get tomorrow's assignment
     const assignment = await db.kitchenTurn.findUnique({
