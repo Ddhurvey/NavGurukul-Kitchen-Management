@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RotationService } from '@/lib/rotation-service';
 import { db } from '@/lib/db';
+import { requireAuth, requireRole } from '@/lib/auth';
 
 // GET all leave requests
 export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('studentId');
@@ -55,6 +58,8 @@ export async function GET(request: NextRequest) {
 
 // POST create new leave request
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const body = await request.json();
     const { studentId, date, reason, notes } = body;
@@ -64,6 +69,10 @@ export async function POST(request: NextRequest) {
         { error: 'Student ID, date, and reason are required' },
         { status: 400 }
       );
+    }
+
+    if (auth.user.id !== studentId && !['ADMIN', 'FC'].includes(auth.user.role)) {
+      return NextResponse.json({ error: 'You can only submit leave for your own account' }, { status: 403 })
     }
 
     // Check if student is assigned to kitchen on this date
