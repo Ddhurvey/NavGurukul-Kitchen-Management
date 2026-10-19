@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 import { getIndiaToday } from '@/lib/time'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const { date, numberOfStudents = 3, force = false } = await request.json()
     
