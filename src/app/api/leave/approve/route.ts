@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
-    const { leaveId, approvedBy, comments } = await request.json()
+    const { leaveId, comments } = await request.json()
+    const approvedBy = auth.user.id
     
     if (!leaveId || !approvedBy) {
       return NextResponse.json(
@@ -74,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // If approved before 9 PM and student is assigned tomorrow, reassign immediately
     if (isAssignedTomorrow && !isPast9PM) {
-      await handleImmediateReassignment(tomorrow, leave.studentId, leaveId)
+      await handleImmediateReassignment(tomorrow, leave.studentId, leaveId, auth.user.id)
     }
 
     // Log the approval
@@ -118,7 +122,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleImmediateReassignment(date: Date, excludedStudentId: string, leaveId: string) {
+async function handleImmediateReassignment(date: Date, excludedStudentId: string, leaveId: string, actorId: string) {
   try {
     // Get tomorrow's assignment
     const assignment = await db.kitchenTurn.findUnique({
@@ -200,7 +204,7 @@ async function handleImmediateReassignment(date: Date, excludedStudentId: string
     await db.historyLog.create({
       data: {
         action: 'IMMEDIATE_REASSIGNMENT_APPROVED_LEAVE',
-        updatedBy: 'SYSTEM',
+        updatedBy: actorId,
         metadata: JSON.stringify({
           date,
           excludedStudentId,
