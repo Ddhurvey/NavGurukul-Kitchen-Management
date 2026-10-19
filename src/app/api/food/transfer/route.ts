@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { z } from 'zod'
 import jwt from 'jsonwebtoken'
+import { requireRole } from '@/lib/auth'
 
 const transferMenuSchema = z.object({
   menuId: z.string().min(1, 'Menu ID is required'),
@@ -43,6 +44,8 @@ async function getCurrentUser(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
     const body = await request.json()
     const { menuId, newUserId } = transferMenuSchema.parse(body)
