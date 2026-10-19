@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { KitchenDutyManager } from '@/lib/kitchen-duty-manager'
+import { requireAuth, requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
     const data = await request.json()
     const { studentId, startDate, endDate, reason } = data
@@ -32,7 +35,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.user) return auth.response
   try {
     const manager = new KitchenDutyManager()
     const cutoffStatus = manager.getCutoffStatus()

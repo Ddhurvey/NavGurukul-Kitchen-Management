@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
-    const { leaveId, approvedBy, comments } = await request.json()
+    const { leaveId, comments } = await request.json()
+    const approvedBy = auth.user.id
     
     if (!leaveId || !approvedBy) {
       return NextResponse.json(
@@ -67,14 +71,12 @@ export async function POST(request: NextRequest) {
       data: {
         status: 'APPROVED',
         approvedBy,
-        approvedAt: new Date(),
-        comments
       }
     })
 
     // If approved before 9 PM and student is assigned tomorrow, reassign immediately
     if (isAssignedTomorrow && !isPast9PM) {
-      await handleImmediateReassignment(tomorrow, leave.studentId, leaveId)
+      await handleImmediateReassignment(tomorrow, leave.studentId, leaveId, auth.user.id)
     }
 
     // Log the approval
@@ -118,7 +120,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleImmediateReassignment(date: Date, excludedStudentId: string, leaveId: string) {
+async function handleImmediateReassignment(date: Date, excludedStudentId: string, leaveId: string, actorId: string) {
   try {
     // Get tomorrow's assignment
     const assignment = await db.kitchenTurn.findUnique({
@@ -200,7 +202,7 @@ async function handleImmediateReassignment(date: Date, excludedStudentId: string
     await db.historyLog.create({
       data: {
         action: 'IMMEDIATE_REASSIGNMENT_APPROVED_LEAVE',
-        updatedBy: 'SYSTEM',
+        updatedBy: actorId,
         metadata: JSON.stringify({
           date,
           excludedStudentId,
@@ -218,7 +220,8 @@ async function handleImmediateReassignment(date: Date, excludedStudentId: string
 
 async function sendImmediateReassignmentNotification(assignment: any, replacementStudent: any, excludedStudentId: string) {
   try {
-    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1422903085680033853/mVeuOQhZk7ocLABZG1fTPcNWf4I5rx98gvRYkjSPZx27rzgkdQamXJIPOW7fJLV5nCPF'
+    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
+    if (!DISCORD_WEBHOOK_URL) return
     
     const message = `Kitchen Duty Reassignment for Tomorrow\n\n` +
       `@${replacementStudent.name.replace(/\s+/g, '-')}- ( ${replacementStudent.foodPreference} )\n\n` +
@@ -246,7 +249,8 @@ async function sendImmediateReassignmentNotification(assignment: any, replacemen
 
 async function sendLeaveApprovalNotification(leave: any, approvedBy: string, isAssignedTomorrow: boolean, isPast9PM: boolean) {
   try {
-    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1422903085680033853/mVeuOQhZk7ocLABZG1fTPcNWf4I5rx98gvRYkjSPZx27rzgkdQamXJIPOW7fJLV5nCPF'
+    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
+    if (!DISCORD_WEBHOOK_URL) return
     
     const startDate = new Date(leave.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     const endDate = new Date(leave.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })

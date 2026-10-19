@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RotationService } from '@/lib/rotation-service';
 import { db } from '@/lib/db';
+import { requireRole } from '@/lib/auth';
 
 // POST process leave request manually
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN', 'FC'])
+  if (!auth.user) return auth.response
   try {
     const body = await request.json();
     const { leaveRequestId, approved } = body;
