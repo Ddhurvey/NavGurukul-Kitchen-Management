@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await db.historyLog.create({
       data: {
         action: 'NOTIFICATION_SYSTEM_RESET',
-        updatedBy: 'SYSTEM_ADMIN',
+        updatedBy: auth.user.id,
         metadata: JSON.stringify({
           resetTime: new Date().toISOString(),
           cycleId: activeCycle.id,
@@ -173,7 +173,9 @@ async function scheduleNotificationsForCycle(cycle: any) {
 }
 
 // GET endpoint to check notification status
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const notifications = await db.scheduledNotification.findMany({
       orderBy: { scheduledFor: 'asc' },
