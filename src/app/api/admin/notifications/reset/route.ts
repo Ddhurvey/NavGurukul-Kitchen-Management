@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getIndiaToday, getIndiaTomorrow, isIndiaSaturday } from '@/lib/time'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
-    const { adminKey } = await request.json()
-    
-    if (adminKey !== process.env.ADMIN_RESET_KEY) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
 
     console.log('🔄 Resetting notification system...')
 
