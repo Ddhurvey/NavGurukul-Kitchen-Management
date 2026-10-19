@@ -121,6 +121,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Request ID and ACCEPTED or REJECTED status are required' }, { status: 400 })
     }
 
+    const normalizedStatus = status as 'ACCEPTED' | 'REJECTED'
     const existing = await db.exchangeRequest.findUnique({ where: { id } })
     if (!existing) return NextResponse.json({ error: 'Swap request not found' }, { status: 404 })
     if (existing.status !== 'PENDING') {
@@ -130,7 +131,7 @@ export async function PUT(request: NextRequest) {
     const updated = await db.exchangeRequest.update({
       where: { id },
       data: {
-        status,
+        status: normalizedStatus,
         approvedBy: auth.user.id,
         approvedAt: new Date(),
         rejectionReason: status === 'REJECTED' && typeof body.rejectionReason === 'string' ? body.rejectionReason : null
@@ -144,9 +145,9 @@ export async function PUT(request: NextRequest) {
 
     await db.historyLog.create({
       data: {
-        action: status === 'ACCEPTED' ? 'SWAP_REQUEST_ACCEPTED' : 'SWAP_REQUEST_REJECTED',
+        action: normalizedStatus === 'ACCEPTED' ? 'SWAP_REQUEST_ACCEPTED' : 'SWAP_REQUEST_REJECTED',
         updatedBy: auth.user.id,
-        metadata: JSON.stringify({ swapRequestId: id, status })
+        metadata: JSON.stringify({ swapRequestId: id, status: normalizedStatus })
       }
     })
 
