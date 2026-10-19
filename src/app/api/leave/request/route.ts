@@ -374,7 +374,7 @@ async function handleEmergencyReassignment(date: Date, excludedStudentId: string
     await db.historyLog.create({
       data: {
         action: 'EMERGENCY_REASSIGNMENT',
-        updatedBy: 'SYSTEM',
+        updatedBy: actorId,
         metadata: JSON.stringify({
           date,
           excludedStudentId,
