@@ -268,8 +268,8 @@ export async function POST(request: NextRequest) {
         // Reset notification system
         const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/notifications/reset`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminKey })
+          headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') || '' },
+          body: JSON.stringify({})
         })
         
         if (notificationResponse.ok) {
