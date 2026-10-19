@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { KitchenDutyScheduler } from '@/lib/kitchen-duty-scheduler'
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     // Get the date for assignment (tomorrow by default)
     const tomorrow = new Date()
@@ -100,7 +103,9 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to check status
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ['ADMIN'])
+  if (!auth.user) return auth.response
   try {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
