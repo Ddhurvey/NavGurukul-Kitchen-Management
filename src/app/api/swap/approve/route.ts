@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
     const updatedSwapRequest = await db.exchangeRequest.update({
       where: { id: swapRequestId },
       data: {
-        status: 'APPROVED',
+        status: 'ACCEPTED',
         approvedBy,
         approvedAt: new Date(),
-        comments
+        rejectionReason: null
       }
     })
 
